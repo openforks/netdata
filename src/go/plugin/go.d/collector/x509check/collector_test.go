@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -162,4 +163,18 @@ func (m mockProvider) certificates() ([]*x509.Certificate, error) {
 		return nil, errors.New("mock certificates error")
 	}
 	return m.certs, nil
+}
+
+func TestFromFile_certificates_ReturnsErrorOnInvalidPEM(t *testing.T) {
+	dir := t.TempDir()
+	invalidPEM := filepath.Join(dir, "invalid.pem")
+	require.NoError(t, os.WriteFile(invalidPEM, []byte("not a pem file"), 0o600))
+
+	f := fromFile{path: invalidPEM}
+	certs, err := f.certificates()
+
+	require.Error(t, err)
+	assert.Nil(t, certs)
+	assert.NotContains(t, err.Error(), "<nil>")
+	assert.Contains(t, err.Error(), "PEM decode failed")
 }
